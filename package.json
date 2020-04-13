@@ -1,0 +1,12 @@
+{
+  "name": "sticky-notes",
+  "version": "1.0.0",
+  "dependencies": {
+    "typescript": "^3.8.3",
+    "underscore": "^1.10.2"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.3.34",
+    "@types/underscore": "^1.9.4"
+  }
+}

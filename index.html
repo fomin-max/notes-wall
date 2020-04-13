@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <title>Sticky Notes</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"
+    />
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/underscore.min.js"></script>
+
+    <style>
+      :root {
+        --header-bg-color: #c0343d;
+        --main-color: #f5f5f5;
+      }
+
+      body {
+        background-color: var(--main-color);
+        font-family: "Helvetica Neue", sans-serif;
+      }
+
+      nav {
+        z-index: 2;
+      }
+
+      .bg-header {
+        background-color: var(--header-bg-color);
+      }
+
+      .main-color {
+        color: var(--main-color);
+      }
+
+      #container {
+        width: 100%;
+        height: 100%;
+        margin: auto;
+        position: absolute;
+      }
+
+      .note {
+        text-decoration: none;
+        position: absolute;
+        display: block;
+        padding: 1em;
+        min-width: 100px;
+        min-height: 100px;
+        box-shadow: 5px 5px 7px rgba(33, 33, 33, 0.7);
+        -webkit-transition: -webkit-transform 0.15s linear;
+        background-color: #000000;
+        color: #000000;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        cursor: move;
+        overflow: hidden;
+      }
+
+      .note-icons {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+      }
+
+      .right {
+        float: right;
+      }
+
+      #backdrop {
+        display: none;
+        position: fixed;
+        min-height: 100%;
+        z-index: 10;
+        background-color: rgba(0, 0, 0, 0.6);
+        overflow: auto;
+        backdrop-filter: blur(3px);
+        top: 0;
+        right: 0;
+        left: 0;
+      }
+
+      #note-modal {
+        position: relative;
+        width: 34rem;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 1);
+        z-index: 11;
+        display: none;
+      }
+
+      .modify-theme {
+        width: 80px;
+        height: 70px;
+        display: inline-block;
+        margin: 10px 22px;
+        cursor: pointer;
+        opacity: 0.5;
+        -webkit-transition: box-shadow 0.1s ease-in-out;
+        box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.45),
+          inset -1px -1px 0 rgba(0, 0, 0, 0.45), 0 2px 5px rgba(0, 0, 0, 0.25);
+      }
+
+      .note-theme-yellow {
+        background-image: -webkit-linear-gradient(
+          top,
+          rgb(254, 252, 204) 25%,
+          rgb(254, 244, 164) 64%
+        );
+      }
+      .note-theme-blue {
+        background-image: -webkit-linear-gradient(
+          top,
+          rgb(181, 245, 255) 25%,
+          rgb(146, 230, 255) 64%
+        );
+      }
+      .note-theme-pink {
+        background-image: -webkit-linear-gradient(
+          top,
+          rgb(255, 204, 255) 25%,
+          rgb(244, 177, 255) 64%
+        );
+      }
+      .note-theme-beige {
+        background-image: -webkit-linear-gradient(
+          top,
+          rgb(255, 220, 226) 25%,
+          rgb(255, 194, 198) 64%
+        );
+      }
+      .note-theme-green {
+        background-image: -webkit-linear-gradient(
+          top,
+          rgb(221, 244, 167) 25%,
+          rgb(170, 255, 105) 64%
+        );
+      }
+      .note-theme-turquoise {
+        background-image: -webkit-linear-gradient(
+          top,
+          rgb(191, 252, 226) 25%,
+          rgb(100, 247, 187) 64%
+        );
+      }
+      .note-theme-purple {
+        background-image: -webkit-linear-gradient(
+          top,
+          rgb(170, 194, 254) 25%,
+          rgb(172, 143, 254) 64%
+        );
+      }
+      .note-theme-orange {
+        background-image: -webkit-linear-gradient(
+          top,
+          rgb(254, 198, 150) 25%,
+          rgb(254, 176, 106) 64%
+        );
+      }
+
+      .modal-body {
+        max-height: 600px;
+      }
+
+      .modal-subtitle {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+
+      .modal-theme-selected {
+        opacity: 1;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      }
+
+      .validate {
+        border: 2px solid #FF0000;
+      }
+
+      .pointer {
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="backdrop"></div>
+    <header>
+      <nav id="header" class="navbar bg-header">
+        <a class="navbar-brand pl-3" href="#">
+          <img
+            src="icons/sticky-notes-icon.png"
+            width="40"
+            height="40"
+            alt="Sticky Notes"
+          />
+          <span class="ml-3 main-color">
+            <b>Sticky Notes</b>
+          </span>
+        </a>
+        <span class="navbar-brand pr-3">
+          <button
+            id="open-note-modal"
+            type="button"
+            class="btn btn-primary"
+          >
+            New note
+          </button>
+        </span>
+      </nav>
+    </header>
+
+    <div id="container"></div>
+
+    <div id="note-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 id="modal-title" class="modal-title">New note</h5>
+          <button id="close-icon" type="button" class="close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="form-group">
+              <label class="modal-subtitle" for="note-title">Title</label>
+              <input
+                id="note-title"
+                type="text"
+                class="form-control"
+                placeholder="Enter note title"
+                maxlength="50"
+                name="title"
+              />
+            </div>
+            <div class="form-group">
+              <label class="modal-subtitle" for="note-content">Content</label>
+              <input
+                id="note-content"
+                type="text"
+                class="form-control"
+                placeholder="Enter note content"
+                maxlength="300"
+                name="content"
+              />
+            </div>
+          </form>
+
+          <h2 class="modal-subtitle">Background</h2>
+          <div id="themes">
+            <div class="modify-theme note-theme-blue modal-theme-selected" data-name="blue"></div>
+            <div class="modify-theme note-theme-pink" data-name="pink"></div>
+            <div class="modify-theme note-theme-beige" data-name="beige"></div>
+            <div class="modify-theme note-theme-green" data-name="green"></div>
+            <div class="modify-theme note-theme-turquoise" data-name="turquoise"></div>
+            <div class="modify-theme note-theme-purple" data-name="purple"></div>
+            <div class="modify-theme note-theme-orange" data-name="orange"></div>
+            <div class="modify-theme note-theme-yellow" data-name="yellow"></div>
+          </div>
+
+          <h2 class="modal-subtitle">Size</h2>
+
+          <form>
+            <div class="row mb-3">
+              <div class="col">
+                <div class="input-group">
+                  <input
+                    id="width"
+                    class="form-control"
+                    placeholder="Enter note width"
+                    name="width"
+                    maxlength="3"
+                  />
+                  <div class="input-group-append">
+                    <span class="input-group-text">px</span>
+                  </div>
+                  <div id="invalid-width" class="invalid-feedback">Width must be at least 100 pixels</div>
+                </div>
+              </div>
+              <div class="col">
+                <div class="input-group">
+                  <input
+                    id="height"
+                    class="form-control"
+                    placeholder="Enter note height"
+                    name="height"
+                    maxlength="3"
+                  />
+                  <div class="input-group-append">
+                    <span class="input-group-text">px</span>
+                  </div>
+                  <div id="invalid-height" class="invalid-feedback">Height must be at least 100 pixels</div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button
+            id="close-button"
+            type="button"
+            class="btn btn-secondary"
+            data-dismiss="note-modal"
+          >
+            Close
+          </button>
+          <button id="new-note" type="button" class="btn btn-primary">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="main.js"></script>
+
+  </body>
+</html>
