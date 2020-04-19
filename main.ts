@@ -34,7 +34,7 @@ interface NoteState {
 
 type Note = NoteState;
 
-// CONSTANTS
+// COMMON CONSTANTS
 
 const CLASSNAME = {
   MODAL_THEME_SELECTED: 'modal-theme-selected',
