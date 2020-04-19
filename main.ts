@@ -1,5 +1,3 @@
-import ChangeEvent = JQuery.ChangeEvent;
-
 // ENUMS
 
 enum NoteThemeName {
@@ -171,7 +169,7 @@ const handleNoteEdit = (id: string): void => {
 };
 
 const handleNoteModalFieldChange = (
-  event: ChangeEvent<
+  event: JQuery.ChangeEvent<
     HTMLInputElement,
     undefined,
     HTMLInputElement,
