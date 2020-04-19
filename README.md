@@ -1,10 +1,10 @@
-# sticky notes
+# Sticky Notes
 
 Project repository: [GitHub](https://github.com/fomin-max/sticky-notes)
 
 - [Description](#Description)
-- [Technology](#Technology)
-- [Development](#Development)
+- [Project start](#Project start)
+- [Browser support](#Browser support)
 - [Contributors](#Contributors)
 
 
@@ -14,10 +14,13 @@ Single-page web application for sticky notes.
 
 Features:
 
-1. Create a new note of the specified size at the specified position.
-2. Change note size by dragging.
-3. Move a note by dragging.
-4. Remove a note by dragging it over a predefined "trash" zone.
+1. Create a new note of the specified size.
+2. Entering/editing note text.
+3. Change note size by dragging.
+4. Move a note by dragging.
+5. Moving notes to front (in case of overlapping notes).
+6. Saving notes to local storage (restoring them on page load).
+7. Different note colors.
 
 
 ## Technology
@@ -27,38 +30,26 @@ Features:
 - [underscore](https://underscorejs.org/)
 
 
-## Development
+## Project start
 
-- [Project start](#Project start)
-- [NPM scripts](#NPM scripts)
+```
+git clone https://github.com/fomin-max/sticky-notes.git
+```
 
-
-### Project start
-
-```javascript
+```
 npm i
 ```
 
-```javascript
-npm start
+```
+npm run tsc
 ```
 
-```javascript
-http://localhost:8000/
-```
+and just open index.html file in your browser.
 
+## Browser support
 
-
-## NPM scripts
-
-```
-npm start        : project start on localhost
-npm run build    : project build with the settings for production, will not be completed if check failed `npm run check`
-npm run check    : lint & TypeScript errors check
-npm run lint     : lint errors check
-npm run tsc      : TypeScript errors check
-```
-
+Latest versions of Google Chrome (Windows and Mac), Mozilla Firefox (all platforms), Microsoft Edge.
 
 ## Contributors
+
 - Fomin Max (fominmax@inbox.ru)

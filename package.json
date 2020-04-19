@@ -1,6 +1,9 @@
 {
   "name": "sticky-notes",
   "version": "1.0.0",
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
     "typescript": "^3.8.3",
     "underscore": "^1.10.2"

@@ -55,24 +55,26 @@ const MODAL_TITLE = {
   EDIT: 'Edit note',
 };
 
+const KEY_CODE_ENTER = 13;
+
 // JQUERY CONSTANTS
 
 const titleInput: JQuery<HTMLInputElement> = $('#note-title');
 const contentInput: JQuery<HTMLInputElement> = $('#note-content');
-const themesElements: JQuery<HTMLDivElement> = $('#themes > div');
+const themesElements: JQuery<HTMLDivElement> = $('#note-themes > div');
 const widthInput: JQuery<HTMLInputElement> = $('#width');
 const heightInput: JQuery<HTMLInputElement> = $('#height');
-const saveButton: JQuery<HTMLButtonElement> = $('#new-note');
+const saveNoteButton: JQuery<HTMLButtonElement> = $('#save-note');
 const newNoteButton: JQuery<HTMLButtonElement> = $('#open-note-modal');
 const backdrop: JQuery<HTMLDivElement> = $('#backdrop');
 const noteModal: JQuery<HTMLDivElement> = $('#note-modal');
 const modalCloseIconButton: JQuery<HTMLButtonElement> = $('#close-icon');
 const modalCloseButton: JQuery<HTMLButtonElement> = $('#close-button');
-const notesContainer: JQuery<HTMLDivElement> = $('#container');
+const noteContainer: JQuery<HTMLDivElement> = $('#note-container');
 const invalidWidth: JQuery<HTMLDivElement> = $('#invalid-width');
 const invalidHeight: JQuery<HTMLDivElement> = $('#invalid-height');
 const defaultTheme: JQuery<HTMLDivElement> = $(
-  `#themes > div[data-name=${NoteThemeName.Blue}]`,
+  `#note-themes > div[data-name=${NoteThemeName.Blue}]`,
 );
 const header: JQuery<HTMLElement> = $('#header');
 const modalTitle: JQuery<HTMLTitleElement> = $('#modal-title');
@@ -101,15 +103,11 @@ const setNotesToLocalStorage = (notes: Note[]): void =>
 
 const getRandomPosition = (max: number): number => _.sample(_.range(10, max));
 
-// MAIN
-
-const noteFormInputs = [titleInput, contentInput, widthInput, heightInput];
-
-let startPositionByX: number;
-let startPositionByY: number;
-let newPositionByX: number;
-let newPositionByY: number;
-let isNoteEditing: boolean = false;
+const getIsContainsInRange = (
+  start: number,
+  stop: number,
+  value: number,
+): boolean => _.contains(_.range(start, stop), value);
 
 // HANDLERS
 
@@ -159,7 +157,7 @@ const handleNoteEdit = (id: string): void => {
 
   contentInput.val(content);
 
-  const themeElement = $(`#themes > div[data-name=${theme}]`);
+  const themeElement = $(`#note-themes > div[data-name=${theme}]`);
 
   themesElements.removeClass(CLASSNAME.MODAL_THEME_SELECTED);
 
@@ -172,47 +170,60 @@ const handleNoteEdit = (id: string): void => {
   openNoteModal();
 };
 
-const handleNoteFormChange = (input: JQuery<HTMLInputElement>): void => {
-  input.on(
-    'change',
-    ({ target: { name, value } }: ChangeEvent<HTMLInputElement>): void => {
-      const isWidthChanged = name === 'width';
-      const isHeightChanged = name === 'height';
+const handleNoteModalFieldChange = (
+  event: ChangeEvent<
+    HTMLInputElement,
+    undefined,
+    HTMLInputElement,
+    HTMLInputElement
+  >,
+): void => {
+  const {
+    target: { name, value },
+    target,
+  } = event;
+  const isWidthChanged = name === 'width';
+  const isHeightChanged = name === 'height';
 
-      const isNoteSizeChanged = isWidthChanged || isHeightChanged;
+  const isNoteSizeChanged = isWidthChanged || isHeightChanged;
 
-      const isNoteSizeInvalid =
-        isNoteSizeChanged && Number(value) < MIN_NOTE_SIDE;
+  const isNoteSizeInvalid = isNoteSizeChanged && Number(value) < MIN_NOTE_SIDE;
 
-      setNoteState({
-        ...noteState,
-        ...(isNoteSizeChanged
-          ? { scale: { ...noteState.scale, [name]: Number(value) } }
-          : { [name]: value }),
-      });
+  setNoteState({
+    ...noteState,
+    ...(isNoteSizeChanged
+      ? { scale: { ...noteState.scale, [name]: Number(value) } }
+      : { [name]: value }),
+  });
 
-      const invalidElement = isWidthChanged ? invalidWidth : invalidHeight;
+  const invalidElement = isWidthChanged ? invalidWidth : invalidHeight;
 
-      isNoteSizeInvalid ? invalidElement.show() : invalidElement.hide();
+  isNoteSizeInvalid ? invalidElement.show() : invalidElement.hide();
 
-      if (_.isEmpty(value) || isNoteSizeInvalid) {
-        input.addClass('validate');
-      } else {
-        input.removeClass('validate');
-      }
-    },
-  );
+  if (_.isEmpty(value) || isNoteSizeInvalid) {
+    target.classList.add('validate');
+  } else {
+    target.classList.remove('validate');
+  }
 };
 
-const handleNotesContainerMouseUp = ({
-  id,
-  offsetTop,
-  offsetLeft,
-  clientWidth,
-  clientHeight,
-}: HTMLDivElement) => {
+const handleNoteContainerMouseUp = (
+  { id, offsetTop, offsetLeft, clientWidth, clientHeight }: HTMLDivElement,
+  target: HTMLElement,
+): void => {
+  const isEditIcon = target.dataset.editid;
+  const isDeleteIcon = target.dataset.deleteid;
+
+  if (isEditIcon) {
+    handleNoteEdit(id);
+  }
+
+  if (isDeleteIcon) {
+    handleNoteDelete(id);
+  }
+
   // Stop moving when mouse button is released:
-  notesContainer.off('mouseup mousemove');
+  noteContainer.off('mouseup mousemove');
 
   const updatedNotes = _.map(notesState, (note) => {
     if (note.id === id) {
@@ -235,7 +246,7 @@ const handleNotesContainerMouseUp = ({
   setNotesState(updatedNotes);
 };
 
-const handleNotesContainerMouseMove = ({
+const handleNoteContainerMouseMove = ({
   event,
   noteElement,
   isLeftSideHover,
@@ -305,7 +316,7 @@ const handleNoteMouseDown = ({
 
   const { id } = noteElement;
 
-  const lastRenderedNote = notesContainer.children().last();
+  const lastRenderedNote = noteContainer.children().last();
 
   const jqueryNoteElement = $(`#${id}`);
 
@@ -316,9 +327,11 @@ const handleNoteMouseDown = ({
   // Move current note to end
   setNotesState([..._.without<Note>(notesState, currentNote), currentNote]);
 
-  notesContainer.on('mouseup', () => handleNotesContainerMouseUp(noteElement));
-  notesContainer.on('mousemove', (event) =>
-    handleNotesContainerMouseMove({
+  noteContainer.on('mouseup', ({ target }) =>
+    handleNoteContainerMouseUp(noteElement, target),
+  );
+  noteContainer.on('mousemove', (event) =>
+    handleNoteContainerMouseMove({
       event,
       noteElement,
       isLeftSideHover,
@@ -339,22 +352,23 @@ const handleNoteMouseMove = ({
   HTMLDivElement,
   HTMLDivElement
 >): void => {
-  const noteWidth = noteElement.clientWidth;
-  const noteHeight = noteElement.clientHeight;
+  const { clientWidth: noteWidth, clientHeight: noteHeight } = noteElement;
+
   const headerHeight = header.innerHeight();
 
   const positionInNoteByX = pageX - noteElement.offsetLeft;
   const positionInNoteByY = pageY - noteElement.offsetTop - headerHeight;
 
-  const isLeftSideHover = _.contains(_.range(-1, 5), positionInNoteByX);
-  const isRightSideHover = _.contains(
-    _.range(-5, 1),
+  const isLeftSideHover = getIsContainsInRange(-1, 5, positionInNoteByX);
+  const isRightSideHover = getIsContainsInRange(
+    -5,
+    1,
     positionInNoteByX - noteWidth,
   );
-  const isTopSideHover = _.contains(_.range(-1, 5), positionInNoteByY);
-  const isBottomSideHover = _.contains(
-    _.range(-5, 0),
-
+  const isTopSideHover = getIsContainsInRange(-1, 5, positionInNoteByY);
+  const isBottomSideHover = getIsContainsInRange(
+    -5,
+    0,
     positionInNoteByY - noteHeight,
   );
 
@@ -422,27 +436,19 @@ const addNoteToContainer = ({
           </span>
           <span class="note-icons">
             <a class="right">
-              <i class="fa fa-trash-o pointer" data-delete-id="${id}" title="Delete note"></i>
+              <i class="fa fa-trash-o pointer" data-deleteid="${id}" title="Delete note"></i>
             </a>
             <a class="right" style="margin-right: 1vw;">
-              <i class="fa fa-pencil pointer" data-edit-id="${id}" title="Edit note"></i>
+              <i class="fa fa-pencil pointer" data-editid="${id}" title="Edit note"></i>
             </a>
           </span>
         </div>`;
 
-  notesContainer.append(noteTemplate);
+  noteContainer.append(noteTemplate);
 
   const currentNote = $(`#${id}`);
 
   currentNote.on('mousemove', handleNoteMouseMove);
-
-  const currentDeleteIcon = $(`*[data-delete-id="${id}"]`);
-
-  const currentEditIcon = $(`*[data-edit-id="${id}"]`);
-
-  currentDeleteIcon.on('click', () => handleNoteDelete(id));
-
-  currentEditIcon.on('click', () => handleNoteEdit(id));
 };
 
 const handleNumericInputKeyup = ({
@@ -467,10 +473,12 @@ const handleNumericInputKeyup = ({
   }
 };
 
-const handleNewNoteClick = () => {
+const handleNewNoteClick = (): void => {
   modalTitle.text(MODAL_TITLE.CREATE);
 
   openNoteModal();
+
+  titleInput.trigger('focus');
 };
 
 const handleNoteSave = (): void => {
@@ -541,8 +549,8 @@ const handleNoteSave = (): void => {
       scale: { height, width },
     } = noteState;
 
-    const maxTop = Math.abs(notesContainer.innerHeight() - height);
-    const maxLeft = Math.abs(notesContainer.innerWidth() - width);
+    const maxTop = Math.abs(noteContainer.innerHeight() - height);
+    const maxLeft = Math.abs(noteContainer.innerWidth() - width);
 
     const note = {
       ...noteState,
@@ -561,27 +569,48 @@ const handleNoteSave = (): void => {
   closeNoteModal();
 };
 
-const handleThemeClick = (themesElement: HTMLDivElement): void => {
+const handleThemeClick = ({ target }: MouseEvent): void => {
+  const selectedTheme = target as HTMLDivElement;
+
   setNoteState({
     ...noteState,
-    theme: themesElement.dataset.name as NoteThemeName,
+    theme: selectedTheme.dataset.name as NoteThemeName,
   });
 
   themesElements.removeClass(CLASSNAME.MODAL_THEME_SELECTED);
-  themesElement.classList.add(CLASSNAME.MODAL_THEME_SELECTED);
+  selectedTheme.classList.add(CLASSNAME.MODAL_THEME_SELECTED);
 };
 
 const handlePageUnload = (): void => {
   setNotesToLocalStorage(notesState);
 };
 
-const renderNotes = () => {
+const handleNoteModalKeyUp = ({ keyCode, which }: JQuery.KeyUpEvent): void => {
+  const code = keyCode || which;
+  if (code === KEY_CODE_ENTER) {
+    $('#note-modal input').trigger('blur');
+
+    saveNoteButton.trigger('click');
+  }
+};
+
+const renderNotes = (): void => {
   const notes = getNotesFromLocalStorage();
 
   if (_.isEmpty(notes)) return;
 
   _.forEach(notes, (note) => addNoteToContainer(note));
 };
+
+// MAIN
+
+const noteFormInputs = [titleInput, contentInput, widthInput, heightInput];
+
+let startPositionByX: number;
+let startPositionByY: number;
+let newPositionByX: number;
+let newPositionByY: number;
+let isNoteEditing: boolean = false;
 
 // Blue color is selected in the default state
 const defaultNoteState = { theme: NoteThemeName.Blue };
@@ -610,13 +639,17 @@ _.forEach([widthInput, heightInput], (numericInput) => {
 });
 
 _.forEach(themesElements, (themesElement) => {
-  themesElement.onclick = () => handleThemeClick(themesElement);
+  themesElement.onclick = handleThemeClick;
 });
 
-_.forEach(noteFormInputs, handleNoteFormChange);
+_.forEach(noteFormInputs, (input) => {
+  input.on('change', handleNoteModalFieldChange);
+});
 
 newNoteButton.on('click', handleNewNoteClick);
 
-saveButton.on('click', handleNoteSave);
+saveNoteButton.on('click', handleNoteSave);
+
+noteModal.on('keyup', handleNoteModalKeyUp);
 
 window.onunload = handlePageUnload;
