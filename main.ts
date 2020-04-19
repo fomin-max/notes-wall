@@ -130,11 +130,9 @@ const closeNoteModal = (): void => {
 };
 
 const handleNoteDelete = (id: string): void => {
-  const notes = getNotesFromLocalStorage();
+  const filteredNotes = _.reject<Note>(notesState, _.matcher({ id: id }));
 
-  const filteredNotes = _.reject<Note>(notes, _.matcher({ id: id }));
-
-  setNotesToLocalStorage(filteredNotes);
+  setNotesState(filteredNotes);
 
   const noteToRemove = $(`#${id}`);
 
@@ -144,9 +142,7 @@ const handleNoteDelete = (id: string): void => {
 const handleNoteEdit = (id: string): void => {
   isNoteEditing = true;
 
-  const notes = getNotesFromLocalStorage();
-
-  const foundNote = _.find<Note>(notes, _.matcher({ id: id }));
+  const foundNote = _.find<Note>(notesState, _.matcher({ id: id }));
 
   setNoteState(foundNote);
 
@@ -215,12 +211,10 @@ const handleNotesContainerMouseUp = ({
   clientWidth,
   clientHeight,
 }: HTMLDivElement) => {
-  // stop moving when mouse button is released:
+  // Stop moving when mouse button is released:
   notesContainer.off('mouseup mousemove');
 
-  const notes = getNotesFromLocalStorage();
-
-  const updatedNotes = _.map(notes, (note) => {
+  const updatedNotes = _.map(notesState, (note) => {
     if (note.id === id) {
       return {
         ...note,
@@ -238,7 +232,7 @@ const handleNotesContainerMouseUp = ({
     return note;
   });
 
-  setNotesToLocalStorage(updatedNotes);
+  setNotesState(updatedNotes);
 };
 
 const handleNotesContainerMouseMove = ({
@@ -309,11 +303,18 @@ const handleNoteMouseDown = ({
 
   const noteElement = currentTarget as HTMLDivElement;
 
+  const { id } = noteElement;
+
   const lastRenderedNote = notesContainer.children().last();
 
-  const jqueryNoteElement = $(`#${noteElement.id}`);
+  const jqueryNoteElement = $(`#${id}`);
 
   jqueryNoteElement.insertAfter(lastRenderedNote);
+
+  const currentNote = _.find<Note>(notesState, _.matcher({ id }));
+
+  // Move current note to end
+  setNotesState([..._.without<Note>(notesState, currentNote), currentNote]);
 
   notesContainer.on('mouseup', () => handleNotesContainerMouseUp(noteElement));
   notesContainer.on('mousemove', (event) =>
@@ -492,8 +493,6 @@ const handleNoteSave = (): void => {
 
   if (!isNoteFormValid) return;
 
-  const notes = getNotesFromLocalStorage();
-
   if (isNoteEditing) {
     const {
       id: editedNoteId,
@@ -504,7 +503,7 @@ const handleNoteSave = (): void => {
       position: { top, left },
     } = noteState;
 
-    const updatedNotes = _.map(notes, (note) => {
+    const updatedNotes = _.map(notesState, (note) => {
       if (note.id === editedNoteId) {
         return noteState as Note;
       }
@@ -512,7 +511,7 @@ const handleNoteSave = (): void => {
       return note;
     });
 
-    setNotesToLocalStorage(updatedNotes);
+    setNotesState(updatedNotes);
 
     const editedNoteSelector = `#${editedNoteId}`;
 
@@ -554,7 +553,7 @@ const handleNoteSave = (): void => {
       },
     } as Note;
 
-    setNotesToLocalStorage([...notes, note]);
+    setNotesState([...notesState, note]);
 
     addNoteToContainer(note);
   }
@@ -570,6 +569,10 @@ const handleThemeClick = (themesElement: HTMLDivElement): void => {
 
   themesElements.removeClass(CLASSNAME.MODAL_THEME_SELECTED);
   themesElement.classList.add(CLASSNAME.MODAL_THEME_SELECTED);
+};
+
+const handlePageUnload = (): void => {
+  setNotesToLocalStorage(notesState);
 };
 
 const renderNotes = () => {
@@ -615,3 +618,5 @@ _.forEach(noteFormInputs, handleNoteFormChange);
 newNoteButton.on('click', handleNewNoteClick);
 
 saveButton.on('click', handleNoteSave);
+
+window.onunload = handlePageUnload;
