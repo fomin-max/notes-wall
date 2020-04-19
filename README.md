@@ -3,8 +3,9 @@
 Project repository: [GitHub](https://github.com/fomin-max/sticky-notes)
 
 - [Description](#Description)
-- [Project start](#Project start)
-- [Browser support](#Browser support)
+- [Technology](#Technology)
+- [Project start](#Project-start)
+- [Browser support](#Browser-support)
 - [Contributors](#Contributors)
 
 
@@ -34,6 +35,10 @@ Features:
 
 ```
 git clone https://github.com/fomin-max/sticky-notes.git
+```
+
+```
+cd sticky-notes/
 ```
 
 ```
